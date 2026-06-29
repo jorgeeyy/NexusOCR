@@ -6,3 +6,7 @@ generate_**
 django+ocr_tool_specification.md
 install**
 ocr_project.log
+.venv
+__pycache__
+*.pyc
+ocr_project.log
