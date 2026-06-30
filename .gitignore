@@ -1,12 +1,31 @@
-venv
+# Virtual environments
+venv/
+.venv/
+
+# Database
 db.sqlite3
-media
-test_**
+
+# Media uploads
+media/
+
+# Generated files
 generate_**
-django+ocr_tool_specification.md
 install**
+
+# Logs
+logs/
 ocr_project.log
-.venv
-__pycache__
+
+# Python
+__pycache__/
 *.pyc
-ocr_project.log
+
+# Environment
+.env
+
+# Static files build output
+staticfiles/
+
+# IDE
+.vscode/
+.idea/

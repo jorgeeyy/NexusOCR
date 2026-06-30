@@ -1,10 +1,18 @@
+import io
+import json
 import logging
+import os
+import re
+import tempfile
 
 from django.contrib import messages
-from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.decorators.http import require_POST
+from django.views.generic import CreateView, DeleteView, DetailView, ListView
 
 from .forms import DocumentUploadForm
 from .models import Document, OCRResult
@@ -13,12 +21,13 @@ from .services.ocr_engine import process_document
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def index_redirect(request):
     """Redirect root to document list or upload."""
     return redirect('upload_document')
 
 
-class DocumentUploadView(CreateView):
+class DocumentUploadView(LoginRequiredMixin, CreateView):
     model = Document
     form_class = DocumentUploadForm
     template_name = 'ocr/upload.html'
@@ -48,22 +57,20 @@ class DocumentUploadView(CreateView):
         return redirect('document_detail', pk=self.object.pk)
 
 
-class DocumentListView(ListView):
+class DocumentListView(LoginRequiredMixin, ListView):
     model = Document
     template_name = 'ocr/document_list.html'
     context_object_name = 'documents'
     paginate_by = 20
 
 
-class DocumentDetailView(DetailView):
+class DocumentDetailView(LoginRequiredMixin, DetailView):
     model = Document
     template_name = 'ocr/document_detail.html'
     context_object_name = 'document'
 
 
-from django.views.generic import DeleteView
-
-class DocumentDeleteView(DeleteView):
+class DocumentDeleteView(LoginRequiredMixin, DeleteView):
     model = Document
     success_url = reverse_lazy('document_list')
     
@@ -72,6 +79,7 @@ class DocumentDeleteView(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+@login_required
 def download_text(request, pk):
     """Download the extracted text in the requested format (.txt, .docx, .xlsx)."""
     document = get_object_or_404(Document, pk=pk)
@@ -85,14 +93,10 @@ def download_text(request, pk):
     base_filename = f"{document.original_filename}_ocr"
 
     if file_format == 'docx':
-        import io
-        import os
-        
         base_filename = document.original_filename.rsplit('.', 1)[0]
         
         if document.is_pdf:
             try:
-                import tempfile
                 from pdf2docx import Converter
                 
                 with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_out:
@@ -138,8 +142,6 @@ def download_text(request, pk):
             return response
 
     elif file_format == 'xlsx':
-        import io
-        import re
         from openpyxl import Workbook
         
         base_filename = document.original_filename.rsplit('.', 1)[0]
@@ -169,7 +171,6 @@ def download_text(request, pk):
 
     else:
         # Default to txt
-        import re
         base_filename = document.original_filename.rsplit('.', 1)[0]
         # Strip HTML tags for plain text export
         clean_content = re.sub(r'<[^>]+>', '', content)
@@ -181,10 +182,7 @@ def download_text(request, pk):
         return response
 
 
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-import json
-
+@login_required
 @require_POST
 def update_document_text(request, pk):
     """Update the extracted text for a document."""

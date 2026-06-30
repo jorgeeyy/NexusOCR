@@ -149,12 +149,21 @@
                     <i id="theme-toggle-light-icon" class="ph-bold ph-sun hidden"></i>
                 </button>
                 
+                {% if user.is_authenticated %}
                 <a href="{% url 'document_list' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                     Documents
                 </a>
                 <a href="{% url 'upload_document' %}" class="btn-primary bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-100 text-sm font-medium py-1.5 px-4 rounded-md flex items-center gap-2">
                     <i class="ph-bold ph-plus"></i> Upload
                 </a>
+                <a href="{% url 'logout' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+                    Sign Out
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn-primary bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-100 text-sm font-medium py-1.5 px-4 rounded-md flex items-center gap-2">
+                    <i class="ph-bold ph-sign-in"></i> Sign In
+                </a>
+                {% endif %}
             </nav>
         </div>
     </header>

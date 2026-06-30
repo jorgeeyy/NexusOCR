@@ -66,8 +66,10 @@ class DocumentUploadForm(forms.ModelForm):
                 else:
                     raise ValidationError(f"Unsupported image format: {img.format}")
                     
+            except ValidationError:
+                raise
             except Exception as e:
-                pass
+                raise ValidationError(f"Invalid image file: {e}")
                 
         if not is_valid:
             raise ValidationError("Invalid file content. The file does not appear to be a valid image or PDF.")
