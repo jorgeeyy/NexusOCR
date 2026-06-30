@@ -331,12 +331,7 @@
             });
         }
 
-        // Cleanup on page leave
-        window.addEventListener('beforeunload', function() {
-            var formData = new FormData();
-            formData.append('csrfmiddlewaretoken', csrfToken);
-            navigator.sendBeacon(deleteUrl, formData);
-        });
+        // Server-side cleanup handles old files (middleware + startup)
     });
 
     // Delete modal
