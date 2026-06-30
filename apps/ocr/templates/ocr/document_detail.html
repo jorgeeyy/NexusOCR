@@ -91,7 +91,7 @@
                     
                     {% if doc.status == 'done' %}
                         <div class="word-page-wrapper w-full max-w-[850px] shadow-2xl dark:shadow-none bg-white transition-all duration-500">
-                            <textarea id="editor">{{ extracted_text|sanitize_html }}</textarea>
+                            <textarea id="editor">{{ extracted_text|linebreaks|sanitize_html }}</textarea>
                         </div>
                     {% elif doc.status == 'processing' %}
                         <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 w-full h-[600px] flex flex-col items-center justify-center backdrop-blur-sm transition-colors duration-300">
@@ -278,7 +278,7 @@
             var text = editor.getContents({format: 'text'}).trim();
             var words = text ? text.split(/\s+/).length : 0;
             if (wordCountSpan) wordCountSpan.textContent = words;
-            debouncedSave(content);
+            debouncedSave(text);
         };
 
         function debouncedSave(content) {

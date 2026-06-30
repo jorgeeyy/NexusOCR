@@ -177,6 +177,7 @@ def update_document_text(request, doc_uuid):
     try:
         data = json.loads(request.body)
         new_text = data.get('text', '')
+        new_text = bleach.clean(new_text, tags=[], strip=True)
         TempStorage.update_text(doc_uuid, new_text)
         return JsonResponse({'status': 'success'})
     except Exception as e:
