@@ -26,7 +26,10 @@ def clean_text(raw_text: str) -> str:
 
     # Relax filtering to support Unicode (common accents, etc.)
     # We remove control characters but keep most printables + HTML tags
-    text = "".join(ch for ch in raw_text if ch.isprintable() or ch in "\n\t\r")
+    text = "".join(
+        ' ' if not ch.isprintable() and ch not in "\n\t\r\f" else ch
+        for ch in raw_text
+    )
 
     # If it's HTML (contains tags), we use a lighter cleaning to avoid breaking structure
     if '<' in text and '>' in text:

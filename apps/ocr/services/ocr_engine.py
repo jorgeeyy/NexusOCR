@@ -14,8 +14,8 @@ pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
 
 def extract_text_from_image(image: Image.Image) -> str:
     processed = preprocess_image(image)
-    hocr = pytesseract.image_to_pdf_or_hocr(processed, extension='hocr').decode('utf-8')
-    return clean_text(hocr)
+    text = pytesseract.image_to_string(processed, config='--psm 6 -c preserve_interword_spaces=1')
+    return clean_text(text)
 
 
 def extract_high_fidelity_pdf(file_path: str) -> str:
@@ -51,7 +51,7 @@ def process_document(doc) -> str:
     """Process a DocumentData instance and extract text.
 
     Tries digital extraction first for PDFs, falling back to OCR if needed.
-    For images, uses HOCR for better layout preservation.
+    For images, uses plain text mode with space preservation.
     """
     from ..storage import TempStorage
 

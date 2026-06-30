@@ -1,3 +1,5 @@
+import io
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.conf import settings
@@ -28,35 +30,24 @@ class UploadForm(forms.Form):
             )
 
         file.seek(0)
-        file_header = file.read(1024)
-        file.seek(0)
+        file_bytes = file.read()
 
-        is_valid = False
-
-        if file_header.startswith(b'%PDF-'):
+        if file_bytes.startswith(b'%PDF-'):
             if ext.endswith('.pdf'):
-                is_valid = True
-            else:
-                raise ValidationError("File content is a PDF, but extension is incorrect.")
-        else:
-            try:
-                from PIL import Image
-                import io
+                file.seek(0)
+                return file
+            raise ValidationError("File content is a PDF, but extension is incorrect.")
 
-                img = Image.open(io.BytesIO(file_header))
-                img.verify()
+        try:
+            from PIL import Image
+            img = Image.open(io.BytesIO(file_bytes))
+            img.verify()
+            if img.format not in ['JPEG', 'PNG', 'BMP', 'TIFF']:
+                raise ValidationError(f"Unsupported image format: {img.format}")
+        except ValidationError:
+            raise
+        except Exception as e:
+            raise ValidationError(f"Invalid image file: {e}")
 
-                if img.format in ['JPEG', 'PNG', 'BMP', 'TIFF']:
-                    is_valid = True
-                else:
-                    raise ValidationError(f"Unsupported image format: {img.format}")
-
-            except ValidationError:
-                raise
-            except Exception as e:
-                raise ValidationError(f"Invalid image file: {e}")
-
-        if not is_valid:
-            raise ValidationError("Invalid file content. The file does not appear to be a valid image or PDF.")
-
+        file.seek(0)
         return file
