@@ -5,112 +5,105 @@ import os
 import re
 import tempfile
 
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, DeleteView, DetailView, ListView
 
-from .forms import DocumentUploadForm
-from .models import Document, OCRResult
+from .forms import UploadForm
 from .services.ocr_engine import process_document
+from .storage import DocumentData, TempStorage
 
 logger = logging.getLogger(__name__)
 
 
-@login_required
-def index_redirect(request):
-    """Redirect root to document list or upload."""
-    return redirect('upload_document')
+def landing(request):
+    """Landing page with upload form."""
+    if request.method == 'POST':
+        form = UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = form.cleaned_data['file']
+            file_data = uploaded_file.read()
+            filename = uploaded_file.name
+
+            ext = filename.lower()
+            if ext.endswith('.pdf'):
+                file_type = 'pdf'
+            else:
+                file_type = 'image'
+
+            doc = TempStorage.create(filename, file_data, file_type)
+            return redirect('process_upload', doc_uuid=doc.uuid)
+    else:
+        form = UploadForm()
+
+    return render(request, 'ocr/upload.html', {'form': form})
 
 
-class DocumentUploadView(LoginRequiredMixin, CreateView):
-    model = Document
-    form_class = DocumentUploadForm
-    template_name = 'ocr/upload.html'
-    success_url = reverse_lazy('document_list')
+def process_upload(request, doc_uuid):
+    """Process an uploaded document (OCR / conversion)."""
+    doc = TempStorage.get(doc_uuid)
+    if not doc:
+        return redirect('landing')
 
-    def form_valid(self, form):
-        # Save the original filename before saving the document
-        form.instance.original_filename = form.cleaned_data['file'].name
-        response = super().form_valid(form)
-        
-        # Process the document synchronously for now
-        # In the future, this should be moved to a Celery task
-        try:
-            extracted_text = process_document(self.object)
-            OCRResult.objects.create(
-                document=self.object,
-                extracted_text=extracted_text
-            )
-            messages.success(self.request, "Document processed successfully!")
-        except Exception as e:
-            logger.error(f"OCR failed during upload: {e}")
-            messages.error(
-                self.request,
-                f"Failed to process document. Ensure it is a valid image or PDF."
-            )
-            
-        return redirect('document_detail', pk=self.object.pk)
+    try:
+        TempStorage.update_status(doc_uuid, 'processing')
+        extracted_text = process_document(doc)
+        doc.text_path.write_text(extracted_text, encoding='utf-8')
+        TempStorage.update_status(doc_uuid, 'done')
+    except Exception as e:
+        logger.error(f"OCR failed for {doc.filename}: {e}")
+        TempStorage.update_status(doc_uuid, 'failed')
+
+    return redirect('document_detail', doc_uuid=doc_uuid)
 
 
-class DocumentListView(LoginRequiredMixin, ListView):
-    model = Document
-    template_name = 'ocr/document_list.html'
-    context_object_name = 'documents'
-    paginate_by = 20
+def document_detail(request, doc_uuid):
+    """Editor page for a processed document."""
+    doc = TempStorage.get(doc_uuid)
+    if not doc:
+        return redirect('landing')
+
+    extracted_text = ''
+    if doc.status == 'done':
+        extracted_text = TempStorage.get_text(doc_uuid)
+
+    return render(request, 'ocr/document_detail.html', {
+        'doc': doc,
+        'extracted_text': extracted_text,
+    })
 
 
-class DocumentDetailView(LoginRequiredMixin, DetailView):
-    model = Document
-    template_name = 'ocr/document_detail.html'
-    context_object_name = 'document'
+def download_text(request, doc_uuid):
+    """Download extracted text in the requested format."""
+    doc = TempStorage.get(doc_uuid)
+    if not doc:
+        return redirect('landing')
 
-
-class DocumentDeleteView(LoginRequiredMixin, DeleteView):
-    model = Document
-    success_url = reverse_lazy('document_list')
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Document deleted successfully.")
-        return super().delete(request, *args, **kwargs)
-
-
-@login_required
-def download_text(request, pk):
-    """Download the extracted text in the requested format (.txt, .docx, .xlsx)."""
-    document = get_object_or_404(Document, pk=pk)
-    
-    if not hasattr(document, 'result'):
-        messages.error(request, "No text found for this document.")
-        return redirect('document_detail', pk=pk)
+    if doc.status != 'done':
+        return redirect('document_detail', doc_uuid=doc_uuid)
 
     file_format = request.GET.get('format', 'txt').lower()
-    content = document.result.extracted_text
-    base_filename = f"{document.original_filename}_ocr"
+    content = TempStorage.get_text(doc_uuid)
+    base_filename = doc.filename.rsplit('.', 1)[0]
 
     if file_format == 'docx':
-        base_filename = document.original_filename.rsplit('.', 1)[0]
-        
-        if document.is_pdf:
+        if doc.is_pdf:
             try:
                 from pdf2docx import Converter
-                
+
                 with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_out:
                     output_path = temp_out.name
-                    
-                cv = Converter(document.file.path)
+
+                cv = Converter(str(doc.file_path))
                 cv.convert(output_path, start=0, end=None)
                 cv.close()
 
                 with open(output_path, 'rb') as f:
                     docx_data = f.read()
-                    
+
                 os.remove(output_path)
-                
+
                 response = HttpResponse(
                     docx_data,
                     content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -119,23 +112,20 @@ def download_text(request, pk):
                 return response
             except Exception as e:
                 logger.error(f"PDF to DOCX conversion failed: {e}")
-                messages.error(request, "Rich PDF to Word conversion failed. Ensure the PDF is valid.")
-                return redirect('document_detail', pk=pk)
-                
+                return redirect('document_detail', doc_uuid=doc_uuid)
         else:
-            # Fallback for images: Create basic DOCX with extracted text
             from docx import Document as DocxDocument
-            
-            doc = DocxDocument()
-            doc.add_heading(f'OCR Extraction: {document.original_filename}', 0)
-            doc.add_paragraph(content)
-            
+
+            doc_obj = DocxDocument()
+            doc_obj.add_heading(f'OCR Extraction: {doc.filename}', 0)
+            doc_obj.add_paragraph(content)
+
             buffer = io.BytesIO()
-            doc.save(buffer)
+            doc_obj.save(buffer)
             buffer.seek(0)
-            
+
             response = HttpResponse(
-                buffer.getvalue(), 
+                buffer.getvalue(),
                 content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             )
             response['Content-Disposition'] = f'attachment; filename="{base_filename}_ocr.docx"'
@@ -143,62 +133,62 @@ def download_text(request, pk):
 
     elif file_format == 'xlsx':
         from openpyxl import Workbook
-        
-        base_filename = document.original_filename.rsplit('.', 1)[0]
-        
-        # Strip HTML tags
+
         clean_content = re.sub(r'<[^>]+>', '', content)
         clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
 
         wb = Workbook()
         ws = wb.active
         ws.title = "OCR Results"
-        
-        # Write each line to a new row
+
         for row_idx, line in enumerate(clean_content.splitlines(), start=1):
             ws.cell(row=row_idx, column=1, value=line)
-            
+
         buffer = io.BytesIO()
         wb.save(buffer)
         buffer.seek(0)
-        
+
         response = HttpResponse(
-            buffer.getvalue(), 
+            buffer.getvalue(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         response['Content-Disposition'] = f'attachment; filename="{base_filename}_ocr.xlsx"'
         return response
 
     else:
-        # Default to txt
-        base_filename = document.original_filename.rsplit('.', 1)[0]
-        # Strip HTML tags for plain text export
         clean_content = re.sub(r'<[^>]+>', '', content)
-        # Decode common HTML entities
         clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-        
+
         response = HttpResponse(clean_content, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename="{base_filename}_ocr.txt"'
         return response
 
 
-@login_required
 @require_POST
-def update_document_text(request, pk):
+def update_document_text(request, doc_uuid):
     """Update the extracted text for a document."""
-    document = get_object_or_404(Document, pk=pk)
-    
-    if not hasattr(document, 'result'):
-        return JsonResponse({'status': 'error', 'message': 'No OCR result found.'}, status=404)
-        
+    doc = TempStorage.get(doc_uuid)
+    if not doc:
+        return JsonResponse({'status': 'error', 'message': 'Document not found.'}, status=404)
+
+    if doc.status != 'done':
+        return JsonResponse({'status': 'error', 'message': 'Document not ready.'}, status=400)
+
     try:
         data = json.loads(request.body)
         new_text = data.get('text', '')
-        
-        document.result.extracted_text = new_text
-        document.result.save()
-        
+        TempStorage.update_text(doc_uuid, new_text)
         return JsonResponse({'status': 'success'})
     except Exception as e:
         logger.error(f"Failed to update text: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_POST
+def delete_document(request, doc_uuid):
+    """Delete a document's temp files."""
+    TempStorage.delete(doc_uuid)
+
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({'status': 'success'})
+    return redirect('landing')

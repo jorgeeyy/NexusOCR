@@ -3,11 +3,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.index_redirect, name='index'),
-    path('upload/', views.DocumentUploadView.as_view(), name='upload_document'),
-    path('documents/', views.DocumentListView.as_view(), name='document_list'),
-    path('documents/<int:pk>/', views.DocumentDetailView.as_view(), name='document_detail'),
-    path('documents/<int:pk>/delete/', views.DocumentDeleteView.as_view(), name='document_delete'),
-    path('documents/<int:pk>/download/', views.download_text, name='download_text'),
-    path('documents/<int:pk>/update-text/', views.update_document_text, name='update_document_text'),
+    path('', views.landing, name='landing'),
+    path('process/<str:doc_uuid>/', views.process_upload, name='process_upload'),
+    path('doc/<str:doc_uuid>/', views.document_detail, name='document_detail'),
+    path('doc/<str:doc_uuid>/download/', views.download_text, name='download_text'),
+    path('doc/<str:doc_uuid>/update-text/', views.update_document_text, name='update_document_text'),
+    path('doc/<str:doc_uuid>/delete/', views.delete_document, name='delete_document'),
 ]

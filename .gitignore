@@ -8,6 +8,9 @@ db.sqlite3
 # Media uploads
 media/
 
+# Temp document storage
+temp/
+
 # Generated files
 generate_**
 install**

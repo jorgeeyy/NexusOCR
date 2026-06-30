@@ -3,17 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Nexus OCR{% endblock %}</title>
+    <title>{% block title %}NexusOCR{% endblock %}</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <script>
@@ -28,18 +25,9 @@
                         primary: {
                             50: '#f0f9ff',
                             100: '#e0f2fe',
-                            500: '#0070f3', // Vercel Blue
+                            500: '#0070f3',
                             600: '#0051a2',
                         },
-                        base: {
-                            50: '#fafafa',
-                            100: '#f5f5f5',
-                            200: '#eaeaea',
-                            300: '#999',
-                            400: '#888',
-                            500: '#666',
-                            900: '#111',
-                        }
                     },
                     boxShadow: {
                         'soft': '0 4px 14px 0 rgba(0, 0, 0, 0.05)',
@@ -72,7 +60,6 @@
         }
     </script>
 
-    <!-- Theme Initialization -->
     <script>
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -86,26 +73,21 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-
         .card {
             transition: all 0.2s ease;
         }
-
         .nav-header {
             backdrop-filter: saturate(180%) blur(16px);
             -webkit-backdrop-filter: saturate(180%) blur(16px);
         }
-
         .btn-primary {
             transition: all 0.2s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.12);
         }
-
         .bg-grid {
             background-size: 32px 32px;
             background-image: 
@@ -114,14 +96,10 @@
             mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
             -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             z-index: -1;
             pointer-events: none;
         }
-
         html.dark .bg-grid {
             background-image: 
                 linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -135,35 +113,18 @@
 
     <header class="nav-header sticky top-0 z-50 h-16 flex items-center bg-white/80 border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800 transition-colors duration-300">
         <div class="max-w-6xl w-full mx-auto px-6 flex items-center justify-between">
-            <a href="{% url 'upload_document' %}" class="flex items-center gap-2 group">
+            <a href="{% url 'landing' %}" class="flex items-center gap-2 group">
                 <div class="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-sm transition-transform group-hover:scale-105">
                     <i class="ph-bold ph-scan text-lg"></i>
                 </div>
                 <span class="font-bold text-lg tracking-tight text-gray-900 dark:text-white">NexusOCR</span>
             </a>
             
-            <nav class="flex items-center gap-4 md:gap-6">
-                <!-- Theme Toggle -->
+            <nav class="flex items-center gap-4">
                 <button id="theme-toggle" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i id="theme-toggle-dark-icon" class="ph-bold ph-moon hidden"></i>
                     <i id="theme-toggle-light-icon" class="ph-bold ph-sun hidden"></i>
                 </button>
-                
-                {% if user.is_authenticated %}
-                <a href="{% url 'document_list' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                    Documents
-                </a>
-                <a href="{% url 'upload_document' %}" class="btn-primary bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-100 text-sm font-medium py-1.5 px-4 rounded-md flex items-center gap-2">
-                    <i class="ph-bold ph-plus"></i> Upload
-                </a>
-                <a href="{% url 'logout' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                    Sign Out
-                </a>
-                {% else %}
-                <a href="{% url 'login' %}" class="btn-primary bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-100 text-sm font-medium py-1.5 px-4 rounded-md flex items-center gap-2">
-                    <i class="ph-bold ph-sign-in"></i> Sign In
-                </a>
-                {% endif %}
             </nav>
         </div>
     </header>
@@ -191,7 +152,6 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">NexusOCR &copy; {% now "Y" %}. Automated Document Extraction.</p>
     </footer>
 
-    <!-- Theme Toggle Logic -->
     <script>
         const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
@@ -206,7 +166,6 @@
                 themeToggleLightIcon.classList.add('hidden');
             }
         }
-
         updateToggleIcons();
 
         themeToggleBtn.addEventListener('click', function() {

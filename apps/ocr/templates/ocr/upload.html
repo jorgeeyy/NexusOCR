@@ -1,13 +1,13 @@
 {% extends "ocr/base.html" %}
 
-{% block title %}Upload Document - NexusOCR{% endblock %}
+{% block title %}NexusOCR{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-2xl mx-auto mt-8 md:mt-16 animate-fade-in-up">
+<div class="w-full max-w-2xl mx-auto mt-8 md:mt-16 animate-fade-in">
     
     <div class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight transition-colors duration-300">Upload Document</h1>
-        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-sm mx-auto transition-colors duration-300">Extract text from your documents instantly. We support images and multi-page PDFs.</p>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight transition-colors duration-300">Extract text from documents</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-sm mx-auto transition-colors duration-300">Upload an image or PDF and we'll extract the text instantly. No account required.</p>
     </div>
 
     <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-dark-soft border border-gray-200 dark:border-gray-800 overflow-hidden relative transition-colors duration-300">
@@ -62,6 +62,30 @@
             
         </form>
     </div>
+
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 animate-slide-up">
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 text-center transition-colors duration-300">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-3 text-blue-500">
+                <i class="ph-bold ph-text-aa text-xl"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">OCR Extraction</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Extract text from images and scanned PDFs with high accuracy</p>
+        </div>
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 text-center transition-colors duration-300">
+            <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center mx-auto mb-3 text-purple-500">
+                <i class="ph-bold ph-file-doc text-xl"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">PDF to Word</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Convert PDFs to editable Word documents preserving layout</p>
+        </div>
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 text-center transition-colors duration-300">
+            <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3 text-green-500">
+                <i class="ph-bold ph-file-xls text-xl"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Multi-Format Export</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Download as TXT, DOCX, or XLSX with one click</p>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -76,7 +100,6 @@
         const btnText = document.getElementById('btn-text');
         const btnIcon = document.getElementById('btn-icon');
         const btnSpinner = document.getElementById('btn-spinner');
-
         const jsErrorMessage = document.getElementById('js-error-message');
 
         fileInput.addEventListener('change', function(e) {
