@@ -89,6 +89,14 @@ def download_text(request, doc_uuid):
 
     if file_format == 'docx':
         if doc.is_pdf:
+            if doc.docx_path.exists():
+                docx_data = doc.docx_path.read_bytes()
+                response = HttpResponse(
+                    docx_data,
+                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                )
+                response['Content-Disposition'] = f'attachment; filename="{base_filename}_converted.docx"'
+                return response
             try:
                 from pdf2docx import Converter
 
@@ -116,9 +124,12 @@ def download_text(request, doc_uuid):
         else:
             from docx import Document as DocxDocument
 
+            clean_content = re.sub(r'<[^>]+>', '', content)
+            clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+
             doc_obj = DocxDocument()
             doc_obj.add_heading(f'OCR Extraction: {doc.filename}', 0)
-            doc_obj.add_paragraph(content)
+            doc_obj.add_paragraph(clean_content)
 
             buffer = io.BytesIO()
             doc_obj.save(buffer)

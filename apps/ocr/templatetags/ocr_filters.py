@@ -1,4 +1,5 @@
 from django import template
+from django.template.defaultfilters import linebreaks
 from django.utils.safestring import mark_safe
 
 import bleach
@@ -28,3 +29,23 @@ def sanitize_html(value):
         strip=True,
     )
     return mark_safe(cleaned)
+
+
+@register.filter
+def format_for_editor(value):
+    """Convert stored text to HTML for the editor.
+
+    If the text is already HTML (contains tags), just sanitize it.
+    If it's plain text, apply linebreaks first then sanitize.
+    """
+    if not value:
+        return ''
+    if '<' in value and '>' in value:
+        cleaned = bleach.clean(
+            value,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            strip=True,
+        )
+        return mark_safe(cleaned)
+    return sanitize_html(linebreaks(value))
