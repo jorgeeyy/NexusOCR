@@ -1,86 +1,93 @@
 # NexusOCR
 
-NexusOCR is a fast, clean, and locally-hosted Document Parsing and Optical Character Recognition (OCR) web application built beautifully with Django and Tailwind CSS. It empowers users to extract raw text from dense images and converts complex PDF documents into perfectly editable Word files with zero layout loss.
+NexusOCR is a fast, clean, and locally-hosted Document Parsing and Optical Character Recognition (OCR) web application built with Django and Tailwind CSS. It extracts text from images and PDFs, preserves formatting (bold, italic, headings, alignment, tables), and provides a WYSIWYG editing workspace with auto-save.
 
-## 🌟 Key Features
+## Features
 
-- **Dual-Theme Modern UI:** A highly polished Vercel/Stripe-inspired interface featuring seamless Light and **Premium Dark Mode** toggling.
-- **Image Text Extraction (OCR):** Upload JPEGs or PNGs and perfectly extract embedded text using the renowned Tesseract OCR engine, pre-processed by OpenCV for maximum accuracy.
-- **True PDF-to-Word Conversion:** Bypass destructive OCR and seamlessly convert multi-page PDFs directly into editable Microsoft Word (`.docx`) files while preserving the exact layout, tables, fonts, and graphics securely.
-- **Multi-Format Exporting:** Download your extractions as Plain Text (`.txt`), Word Documents (`.docx`), or Data Spreadsheets (`.xlsx`).
-- **Secure File Lifecycle Management:** Beautifully integrated Javascript modals to cleanly delete documents and their system traces right from your dashboard.
+- **Dual-Theme UI:** Seamless Light and Premium Dark Mode toggling.
+- **Image OCR (Tesseract):** Upload images and extract text via Tesseract OCR with OpenCV preprocessing for accuracy.
+- **PDF Text Extraction:** Digital PDFs are parsed via PyMuPDF (fitz) with position-aware layout detection — preserves right-aligned addresses, centered headings, bold/italic text.
+- **Scanned PDF Fallback:** If a PDF has no selectable text (<100 chars), it falls back to Tesseract OCR automatically.
+- **WYSIWYG Editor:** SunEditor-based rich text editing workspace with formatting toolbar, auto-save (2s debounce), and live word count.
+- **Multi-Format Export:** Download as Plain Text (`.txt`), Word Document (`.docx` — layout-preserving via pdf2docx for PDFs), or Spreadsheet (`.xlsx`).
+- **Secure File Cleanup:** Automatic cleanup of expired uploads; manual delete with confirmation modal.
 
 ---
 
-## 🚀 Local Development Setup
-
-Because NexusOCR does heavily lifting with imaging and binaries, you must install a few system dependencies before the Python environment will work.
+## Local Development Setup
 
 ### 1. Prerequisites (Windows)
 
-Ensure you have the following installed on your system:
-
 - **Python 3.10+**
-- **Tesseract-OCR:**
-  Download the Windows installer from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki).
-  _Note: Installed default path is expected to be `C:\Program Files\Tesseract-OCR\tesseract.exe`._
-- **Poppler:** (For PDF rendering)
-  Download the latest Poppler binary and place it in your project root or add it to your System PATH environment variables or you can use the one provided in the project root.
+- **Tesseract-OCR:** Download from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki). Default path: `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+- **Poppler:** Download the latest Poppler binary and place it in the project root or add to your System PATH.
 
 ### 2. Environment Setup
 
-Clone this repository and open your terminal to the root folder:
-
 ```bash
-# 1. Create a virtual environment
-python -m venv venv
+git clone <repo>
+cd NexusOCR
 
-# 2. Activate the virtual environment
-# On Windows:
-venv\Scripts\activate
-# On Mac/Linux:
-source venv/bin/activate
+uv venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # Mac/Linux
 
-# 3. Install the required Python packages
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
-### 3. Database & Server
+### 3. Configuration
 
-Initialize the local SQLite database and spin up the environment:
+Copy or edit `ocr_project/settings.py` to set:
+
+- `TESSERACT_CMD` — path to the Tesseract executable
+- `POPPLER_PATH` — path to the Poppler `bin` directory
+
+### 4. Database & Server
 
 ```bash
-# 1. Run migrations
 python manage.py migrate
-
-# 2. Start the Django Development Server
 python manage.py runserver
 ```
 
-Navigate to `http://localhost:8000` in your browser.
+Navigate to `http://localhost:8000`.
 
 ---
 
-## 🤝 How to Contribute
+## Architecture
 
-We welcome contributions to make NexusOCR even better!
+```
+Upload → TempStorage (disk) → process_document()
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+                  Image                   PDF
+                    │                       │
+              preprocess.py        extract_pdf_formatted_html()
+              (grayscale,           (fitz → position-aware HTML)
+               upscale)                │
+                    │              pdf2docx → .docx (for export)
+              Tesseract OCR             │
+                    │              fallback: extract_scanned_pdf()
+                    │              (pdf2image → Tesseract OCR)
+                    │                       │
+                    └───────────┬───────────┘
+                                │
+                    extracted_text.txt
+                                │
+                    document_detail.html
+                    SunEditor (auto-save → update_document_text)
+```
 
-### Contribution Workflow:
+## Tech Stack
 
-1. **Fork the Repository:** Create your own fork and clone it to your local machine.
-2. **Create a Branch:** Create a feature branch (`git checkout -b feature/AmazingFeature`).
-3. **Commit your Changes:** Commit with clear, descriptive messages (`git commit -m 'Add some AmazingFeature'`).
-4. **Push to the Branch:** Push your changes up to your fork (`git push origin feature/AmazingFeature`).
-5. **Open a Pull Request:** Submit a Pull Request targeting the `main` branch.
-
-### Areas for Future Improvement:
-
-- Moving the synchronous Document Upload parsing into a **Celery Worker Queue** (with Redis) for asynchronous heavy lifting on massive PDFs.
-- Adding PostgreSQL support for production environments.
-- Enhancing the text cleanup post-processing algorithms.
+- **Backend:** Django 5.x, Python 3.10+
+- **OCR:** Tesseract (pytesseract), OpenCV (opencv-python-headless), Pillow
+- **PDF:** PyMuPDF (fitz), pdf2image, pdf2docx, python-docx
+- **Frontend:** Tailwind CSS, SunEditor (WYSIWYG), Phosphor Icons
+- **Sanitization:** bleach, tinycss2
 
 ---
 
-## 📜 License
+## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT
