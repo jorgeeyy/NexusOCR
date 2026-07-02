@@ -36,7 +36,7 @@ def clean_text(raw_text: str) -> str:
         # Standardize newlines
         text = text.replace("\r\n", "\n").replace("\r", "\n")
         # Remove excessive empty lines only
-        text = re.sub(r'\n{4,}', '\n\n\n', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
     # Standard plain text cleaning

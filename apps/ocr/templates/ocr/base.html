@@ -136,18 +136,6 @@
 
     <main class="flex-grow py-12 px-6 relative z-10 w-full">
         <div class="max-w-5xl w-full mx-auto">
-            {% if messages %}
-                <div class="mb-8 flex flex-col gap-3 animate-slide-up">
-                    {% for message in messages %}
-                        <div class="px-5 py-4 rounded-lg flex items-center justify-between shadow-sm border {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800/50 dark:text-red-300{% else %}bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-800/50 dark:text-green-300{% endif %} hover:shadow-md transition-shadow">
-                            <div class="flex items-center gap-3">
-                                <i class="ph-fill {% if message.tags == 'error' %}ph-warning-circle text-red-500{% else %}ph-check-circle text-green-500{% endif %} text-xl"></i>
-                                <p class="text-sm font-medium">{{ message }}</p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
 
             {% block content %}{% endblock %}
         </div>

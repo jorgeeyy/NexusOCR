@@ -11,14 +11,16 @@ ALLOWED_TAGS = list(bleach.ALLOWED_TAGS) + [
     'p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
     'ul', 'ol', 'li', 'pre', 'blockquote', 'hr',
-    'strong', 'em', 'b', 'i', 'u', 's',
+    'strong', 'em', 'b', 'i', 'u', 's', 'img',
 ]
 
 ALLOWED_ATTRIBUTES = dict(bleach.ALLOWED_ATTRIBUTES)
 ALLOWED_ATTRIBUTES['*'] = ['class', 'style']
+ALLOWED_ATTRIBUTES['img'] = ['src', 'alt', 'style']
 
 CSS_SANITIZER = CSSSanitizer(allowed_css_properties=[
     'text-align', 'text-decoration', 'font-weight', 'font-style',
+    'max-width', 'height',
 ])
 
 
@@ -33,6 +35,7 @@ def sanitize_html(value):
         attributes=ALLOWED_ATTRIBUTES,
         css_sanitizer=CSS_SANITIZER,
         strip=True,
+        protocols=['http', 'https', 'mailto', 'data'],
     )
     return mark_safe(cleaned)
 
@@ -47,12 +50,5 @@ def format_for_editor(value):
     if not value:
         return ''
     if '<' in value and '>' in value:
-        cleaned = bleach.clean(
-            value,
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRIBUTES,
-            css_sanitizer=CSS_SANITIZER,
-            strip=True,
-        )
-        return mark_safe(cleaned)
+        return sanitize_html(value)
     return sanitize_html(linebreaks(value))

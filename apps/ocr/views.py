@@ -5,14 +5,14 @@ import os
 import re
 import tempfile
 
-from django.conf import settings
+import bleach
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import UploadForm
 from .services.ocr_engine import process_document
-from .storage import DocumentData, TempStorage
+from .storage import TempStorage
 
 logger = logging.getLogger(__name__)
 
@@ -129,8 +129,7 @@ def download_text(request, doc_uuid):
         else:
             from docx import Document as DocxDocument
 
-            clean_content = re.sub(r'<[^>]+>', '', content)
-            clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            clean_content = _strip_html_entities(re.sub(r'<[^>]+>', '', content))
 
             doc_obj = DocxDocument()
             doc_obj.add_heading(f'OCR Extraction: {doc.filename}', 0)
@@ -150,8 +149,7 @@ def download_text(request, doc_uuid):
     elif file_format == 'xlsx':
         from openpyxl import Workbook
 
-        clean_content = re.sub(r'<[^>]+>', '', content)
-        clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        clean_content = _strip_html_entities(re.sub(r'<[^>]+>', '', content))
 
         wb = Workbook()
         ws = wb.active
@@ -172,12 +170,15 @@ def download_text(request, doc_uuid):
         return response
 
     else:
-        clean_content = re.sub(r'<[^>]+>', '', content)
-        clean_content = clean_content.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        clean_content = _strip_html_entities(re.sub(r'<[^>]+>', '', content))
 
         response = HttpResponse(clean_content, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename="{base_filename}_ocr.txt"'
         return response
+
+
+def _strip_html_entities(text: str) -> str:
+    return text.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
 
 
 @require_POST

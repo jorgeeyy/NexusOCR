@@ -18,7 +18,6 @@ def preprocess_image(image: Image.Image) -> Image.Image:
     h, w = gray.shape
     if h < 500 or w < 500:
         scale = max(2, min(1500 // h, 1500 // w))
-        if scale > 1:
-            gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
     return Image.fromarray(gray)
