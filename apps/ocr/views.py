@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 def landing(request):
-    """Landing page with upload form."""
+    """Landing / marketing page."""
+    return render(request, 'ocr/landing.html')
+
+
+def upload_page(request):
+    """Upload page with form."""
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -44,7 +49,7 @@ def process_upload(request, doc_uuid):
     """Process an uploaded document (OCR / conversion)."""
     doc = TempStorage.get(doc_uuid)
     if not doc:
-        return redirect('landing')
+        return redirect('upload_page')
 
     try:
         TempStorage.update_status(doc_uuid, 'processing')
@@ -62,7 +67,7 @@ def document_detail(request, doc_uuid):
     """Editor page for a processed document."""
     doc = TempStorage.get(doc_uuid)
     if not doc:
-        return redirect('landing')
+        return redirect('upload_page')
 
     extracted_text = ''
     if doc.status == 'done':
@@ -78,7 +83,7 @@ def download_text(request, doc_uuid):
     """Download extracted text in the requested format."""
     doc = TempStorage.get(doc_uuid)
     if not doc:
-        return redirect('landing')
+        return redirect('upload_page')
 
     if doc.status != 'done':
         return redirect('document_detail', doc_uuid=doc_uuid)
