@@ -2,6 +2,8 @@
 
 NexusOCR is a fast, clean, and locally-hosted Document Parsing and Optical Character Recognition (OCR) web application built with Django and Tailwind CSS. It extracts text from images and PDFs, preserves formatting (bold, italic, headings, alignment, tables), and provides a WYSIWYG editing workspace with auto-save.
 
+> **Live at [`nexusocr.onrender.com`](https://nexusocr.onrender.com)** — free, no sign-up required.
+
 ## Features
 
 - **Dual-Theme UI:** Seamless Light and Premium Dark Mode toggling.
