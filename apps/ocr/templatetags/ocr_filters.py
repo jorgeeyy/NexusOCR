@@ -3,6 +3,7 @@ from django.template.defaultfilters import linebreaks
 from django.utils.safestring import mark_safe
 
 import bleach
+from bleach.css_sanitizer import CSSSanitizer
 
 register = template.Library()
 
@@ -16,6 +17,10 @@ ALLOWED_TAGS = list(bleach.ALLOWED_TAGS) + [
 ALLOWED_ATTRIBUTES = dict(bleach.ALLOWED_ATTRIBUTES)
 ALLOWED_ATTRIBUTES['*'] = ['class', 'style']
 
+CSS_SANITIZER = CSSSanitizer(allowed_css_properties=[
+    'text-align', 'text-decoration', 'font-weight', 'font-style',
+])
+
 
 @register.filter
 def sanitize_html(value):
@@ -26,6 +31,7 @@ def sanitize_html(value):
         value,
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRIBUTES,
+        css_sanitizer=CSS_SANITIZER,
         strip=True,
     )
     return mark_safe(cleaned)
@@ -45,6 +51,7 @@ def format_for_editor(value):
             value,
             tags=ALLOWED_TAGS,
             attributes=ALLOWED_ATTRIBUTES,
+            css_sanitizer=CSS_SANITIZER,
             strip=True,
         )
         return mark_safe(cleaned)

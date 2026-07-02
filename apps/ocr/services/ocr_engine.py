@@ -47,6 +47,88 @@ def extract_scanned_pdf(file_path: str) -> str:
         raise RuntimeError(f"Failed to convert PDF: {e}")
 
 
+def extract_pdf_formatted_html(file_path: str) -> str:
+    """Extract PDF text as HTML preserving alignment and basic formatting.
+
+    Uses PyMuPDF (fitz) to read text blocks with position information.
+    Detects left/right/center alignment from x-coordinates and bold/italic
+    from font names, then reconstructs the layout as HTML.
+    """
+    import fitz
+    doc = fitz.open(file_path)
+    page_html_parts = []
+
+    for page in doc:
+        pw = page.rect.width
+        blocks = page.get_text("dict")["blocks"]
+
+        raw_lines = []
+        for block in blocks:
+            if block["type"] != 0:
+                continue
+            for line in block["lines"]:
+                lx0, ly0, lx1, ly1 = line["bbox"]
+                if lx0 > pw * 0.6:
+                    align = "right"
+                elif lx0 > pw * 0.3 and lx1 < pw * 0.7:
+                    align = "center"
+                else:
+                    align = "left"
+
+                text_parts = []
+                for span in line["spans"]:
+                    raw = span["text"]
+                    if not raw:
+                        continue
+                    txt = raw.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    font = (span.get("font") or "").lower()
+                    is_bold = "bold" in font or "bd" in font or "heavy" in font or "black" in font
+                    is_italic = "italic" in font or "it" in font or "oblique" in font
+                    if is_bold and is_italic:
+                        txt = f"<strong><em>{txt}</em></strong>"
+                    elif is_bold:
+                        txt = f"<strong>{txt}</strong>"
+                    elif is_italic:
+                        txt = f"<em>{txt}</em>"
+                    text_parts.append(txt)
+
+                raw_lines.append((ly0, align, "".join(text_parts)))
+
+        if not raw_lines:
+            continue
+
+        raw_lines.sort(key=lambda x: x[0])
+
+        # Group consecutive lines into paragraphs by vertical proximity.
+        # Lines close together (within 20px, typical line-height at 12pt)
+        # with the same alignment belong to the same paragraph.
+        paragraphs = []
+        cur_align = None
+        cur_y = None
+        cur_lines = []
+
+        for y, align, text in raw_lines:
+            if cur_lines and (align != cur_align or (cur_y is not None and y - cur_y > 20)):
+                paragraphs.append((cur_align, cur_lines))
+                cur_lines = []
+            cur_align = align
+            cur_y = y
+            cur_lines.append(text)
+
+        if cur_lines:
+            paragraphs.append((cur_align, cur_lines))
+
+        for align, lines in paragraphs:
+            inner = "<br>".join(lines)
+            if align == "left":
+                page_html_parts.append(f"<p>{inner}</p>")
+            else:
+                page_html_parts.append(f'<p style="text-align:{align}">{inner}</p>')
+
+    doc.close()
+    return "\n".join(page_html_parts)
+
+
 def _run_to_html(run) -> str:
     text = run.text
     if not text:
@@ -144,9 +226,9 @@ def _docx_to_html(doc) -> str:
 def process_document(doc) -> str:
     """Process a DocumentData instance and extract text.
 
-    For PDFs: tries pdf2docx layout-preserving conversion first,
-    then extracts formatted HTML for the editor. Falls back to OCR
-    if the PDF is scanned (no selectable text).
+    For PDFs: extracts formatted HTML via PyMuPDF (preserving alignment,
+    bold/italic). Also saves a layout-preserving .docx via pdf2docx
+    for export. Falls back to OCR if the PDF has no selectable text.
     For images: uses Tesseract OCR with space preservation.
     """
     from ..storage import TempStorage
@@ -156,10 +238,19 @@ def process_document(doc) -> str:
 
     try:
         if doc.is_pdf:
-            text = convert_pdf_to_docx_and_extract_html(file_path, str(doc.docx_path))
+            text = extract_pdf_formatted_html(file_path)
             if len(text.strip()) < 100:
                 logger.info(f"PDF seems scanned, switching to OCR for {doc.filename}")
                 text = extract_scanned_pdf(file_path)
+
+            # Save layout-preserving .docx for export (best effort)
+            try:
+                from pdf2docx import Converter
+                cv = Converter(file_path)
+                cv.convert(str(doc.docx_path), start=0, end=None)
+                cv.close()
+            except Exception as e:
+                logger.warning(f"Could not create export .docx for {doc.filename}: {e}")
 
         elif doc.is_image:
             image = Image.open(file_path)

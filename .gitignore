@@ -32,3 +32,5 @@ staticfiles/
 # IDE
 .vscode/
 .idea/
+cover_**
+test_**
