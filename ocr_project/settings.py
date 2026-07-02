@@ -21,6 +21,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -54,20 +55,39 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1')
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1')
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1')
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if o.strip()
+]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TESSERACT_CMD = os.environ.get(
     'TESSERACT_CMD',
-    r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    '/usr/bin/tesseract'
 )
+
+# TESSERACT_CMD = os.environ.get(
+#     'TESSERACT_CMD',
+#     r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# )
 
 POPPLER_PATH = os.environ.get(
     'POPPLER_PATH',
-    str(BASE_DIR / 'poppler_binaries' / 'poppler-24.08.0' / 'Library' / 'bin')
+    '/usr/bin'
 )
 
 LOGGING = {
