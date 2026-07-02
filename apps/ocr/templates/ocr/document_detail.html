@@ -357,7 +357,19 @@
     };
 
     window.submitDelete = function() {
-        document.getElementById('delete-form').submit();
+        var form = document.getElementById('delete-form');
+        var csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrf,
+                'Accept': 'application/json',
+            },
+        }).then(function() {
+            window.location.replace('/upload/');
+        }).catch(function() {
+            window.location.replace('/upload/');
+        });
     };
 </script>
 {% endblock %}
